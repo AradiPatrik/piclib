@@ -1,7 +1,3 @@
-from dotenv import load_dotenv
-
-load_dotenv()
-
 from typing import Annotated
 from fastapi import Depends, FastAPI
 from sqlalchemy.orm import Session
@@ -33,6 +29,32 @@ def create_book(book: schemas.BookCreate, db: DependDb):
 def get_books(db: DependDb):
     books = crud.get_books(db)
     return books
+
+
+@app.get("/books/availability/", response_model=list[schemas.BookWithAvailability])
+def return_book_availability(db: DependDb):
+    books_with_lends = crud.get_books_with_lends(db)
+    result = []
+    for book in books_with_lends:
+        sorted_lends = sorted(book.lends, key=lambda l: l.lend_date, reverse=True)
+        last_lend: models.Lend | None = sorted_lends[0] if sorted_lends else None
+        has_lend_record = last_lend is not None
+        is_returned = has_lend_record and last_lend.return_date is not None
+        is_available = not has_lend_record or is_returned
+
+        result.append(
+            schemas.BookWithAvailability(
+                title=book.title,
+                author=book.author,
+                isbn=book.isbn,
+                availability=schemas.BookAvailability(
+                    is_available=is_available,
+                    slack_id=None if is_available else last_lend.slack_id,
+                    return_date=None if is_available else last_lend.return_date,
+                )
+            )
+        )
+    return result
 
 
 @app.delete("/books/{isbn}/")

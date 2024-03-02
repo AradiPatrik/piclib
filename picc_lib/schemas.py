@@ -9,7 +9,7 @@ class BaseBook(BaseModel):
 
 
 class Book(BaseBook):
-    model_config=ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True)
     date_added: datetime
 
 
@@ -17,13 +17,22 @@ class BookCreate(BaseBook):
     pass
 
 
+class BookAvailability(BaseModel):
+    is_available: bool
+    slack_id: str | None
+    return_date: datetime | None
+
+
+class BookWithAvailability(BaseBook):
+    availability: BookAvailability
+
+
 class LendCreate(BaseModel):
     isbn: str
 
 class Lend(BaseModel):
-    model_config=ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True)
     isbn: str
     slack_id: str
     lend_date: datetime
     return_date: datetime | None
-

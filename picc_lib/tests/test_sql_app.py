@@ -8,13 +8,14 @@ from .. import crud
 from . import seed
 from .. import models
 
-from picc_lib.main import app
+from ...router import app
 
 client = TestClient(app)
 
 
 def is_recent(date_time, seconds=10):
     return datetime.now() - timedelta(seconds=seconds) <= date_time <= datetime.now()
+
 
 def test_add_book(db_session):
     # WHEN
@@ -110,6 +111,7 @@ def test_GIVEN_user_has_books_WHEN_get_books_THEN_return_book_list(db_session):
     assert is_recent(lend_date)
     assert lends[0]["return_date"] is None
 
+
 def test_GIVEN_user_has_no_books_WHEN_get_books_THEN_return_empty_list(db_session):
     # WHEN
     response = client.get("/lends/yanbin")
@@ -137,4 +139,3 @@ def test_GIVEN_user_has_lend_WHEN_update_lend_date_THEN_lend_date_should_update(
 
     assert lends[0].return_date is not None
     assert is_recent(lends[0].return_date, seconds=1)
-

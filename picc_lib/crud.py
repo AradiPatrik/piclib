@@ -1,8 +1,14 @@
-from sqlalchemy import delete, select, update
-from sqlalchemy.orm import Session
+from typing import Sequence
+
+from sqlalchemy import delete, select, update, desc
+from sqlalchemy.orm import Session, selectinload
 from datetime import datetime
+import logging
+
 
 from . import models, schemas
+
+logger = logging.Logger(__name__)
 
 
 def create_book(db: Session, book_create: schemas.BookCreate) -> models.Book:
@@ -43,11 +49,16 @@ def get_lends_of_user(db: Session, slack_id: str):
 
 
 def return_book(db: Session, slack_id: str, isbn: str):
-    statement = update(models.Lend)\
+    statement = update(models.Lend) \
         .where(
-            models.Lend.slack_id == slack_id,
-            models.Lend.isbn == isbn
+        models.Lend.slack_id == slack_id,
+        models.Lend.isbn == isbn
     ).values(return_date=datetime.now())
 
     db.execute(statement)
     db.commit()
+
+
+def get_books_with_lends(db: Session) -> Sequence[models.Book]:
+    statement = select(models.Book).options(selectinload(models.Book.lends))
+    return db.execute(statement).scalars().all()

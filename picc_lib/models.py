@@ -1,16 +1,22 @@
+import dataclasses
+
 from sqlalchemy import ForeignKey, String
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from .database import Base
 from datetime import datetime
 
 
+@dataclasses.dataclass
 class Book(Base):
     __tablename__ = "books"
 
-    isbn: Mapped[str] = mapped_column(String(13),primary_key=True)
+    date_added: Mapped[datetime]
+    isbn: Mapped[str] = mapped_column(String(13), primary_key=True)
     title: Mapped[str] = mapped_column(String(100))
     author: Mapped[str] = mapped_column(String(100))
-    date_added: Mapped[datetime]
+
+    lends: Mapped[list["Lend"]] = relationship(back_populates="book")
+
 
 class Lend(Base):
     __tablename__ = "lends"
@@ -20,4 +26,6 @@ class Lend(Base):
     isbn: Mapped[str] = mapped_column(ForeignKey("books.isbn"))
     lend_date: Mapped[datetime]
     return_date: Mapped[datetime | None]
+
+    book: Mapped["Book"] = relationship(back_populates="lends")
 
