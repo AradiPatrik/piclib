@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 
 from picc_lib import crud, models, schemas
 from picc_lib.database import SessionLocal, engine
+from picc_lib.mappers import to_book_with_availability
 
 models.Base.metadata.create_all(bind=engine)
 app = FastAPI()
@@ -33,28 +34,7 @@ def get_books(db: DependDb):
 
 @app.get("/books/availability/", response_model=list[schemas.BookWithAvailability])
 def return_book_availability(db: DependDb):
-    books_with_lends = crud.get_books_with_lends(db)
-    result = []
-    for book in books_with_lends:
-        sorted_lends = sorted(book.lends, key=lambda l: l.lend_date, reverse=True)
-        last_lend: models.Lend | None = sorted_lends[0] if sorted_lends else None
-        has_lend_record = last_lend is not None
-        is_returned = has_lend_record and last_lend.return_date is not None
-        is_available = not has_lend_record or is_returned
-
-        result.append(
-            schemas.BookWithAvailability(
-                title=book.title,
-                author=book.author,
-                isbn=book.isbn,
-                availability=schemas.BookAvailability(
-                    is_available=is_available,
-                    slack_id=None if is_available else last_lend.slack_id,
-                    return_date=None if is_available else last_lend.return_date,
-                )
-            )
-        )
-    return result
+    return [to_book_with_availability(book) for book in crud.get_books_with_lends(db)]
 
 
 @app.delete("/books/{isbn}/")

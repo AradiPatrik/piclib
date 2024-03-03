@@ -1,10 +1,10 @@
-from typing import Sequence
+from operator import and_
+from typing import Sequence, Tuple, Any
 
-from sqlalchemy import delete, select, update, desc
-from sqlalchemy.orm import Session, selectinload
+from sqlalchemy import delete, select, update, desc, ScalarResult, text, Row, func
+from sqlalchemy.orm import Session, selectinload, aliased
 from datetime import datetime
 import logging
-
 
 from . import models, schemas
 
@@ -59,6 +59,13 @@ def return_book(db: Session, slack_id: str, isbn: str):
     db.commit()
 
 
-def get_books_with_lends(db: Session) -> Sequence[models.Book]:
-    statement = select(models.Book).options(selectinload(models.Book.lends))
-    return db.execute(statement).scalars().all()
+def get_books_with_lends(db: Session) -> Sequence[Row[Tuple[Any, ...]]]:
+    Book = models.Book
+    Lend = models.Lend
+    stmt = select(Book, Lend, func.max(Lend.lend_date)).outerjoin(Lend, onclause=Lend.isbn == Book.isbn).group_by(Book.isbn)
+    foo = db.execute(stmt).all()
+    return foo
+
+
+def get_books_and_limit_lends(db: Session):
+    statement = select(models.Book)

@@ -15,7 +15,7 @@ class Book(Base):
     title: Mapped[str] = mapped_column(String(100))
     author: Mapped[str] = mapped_column(String(100))
 
-    lends: Mapped[list["Lend"]] = relationship(back_populates="book")
+    lends: Mapped[list["Lend"]] = relationship(back_populates="book",order_by='desc(Lend.lend_date)', lazy='dynamic')
 
 
 class Lend(Base):
@@ -23,8 +23,8 @@ class Lend(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     slack_id: Mapped[str] = mapped_column(index=True)
-    isbn: Mapped[str] = mapped_column(ForeignKey("books.isbn"))
-    lend_date: Mapped[datetime]
+    isbn: Mapped[str] = mapped_column(ForeignKey("books.isbn"), index=True)
+    lend_date: Mapped[datetime] = mapped_column(index=True)
     return_date: Mapped[datetime | None]
 
     book: Mapped["Book"] = relationship(back_populates="lends")
