@@ -3,6 +3,8 @@
 
 name: Python application
 
+env:
+  DB_URL: "sqlite:///:memory:"
 on:
   pull_request:
     branches: [ "main" ]
