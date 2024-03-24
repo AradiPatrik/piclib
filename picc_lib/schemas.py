@@ -20,7 +20,7 @@ class BookCreate(BaseBook):
 class BookAvailability(BaseModel):
     is_available: bool
     slack_id: str | None
-    return_date: datetime | None
+    expected_return_date: datetime | None
 
 
 class BookWithAvailability(BaseBook):
@@ -29,6 +29,7 @@ class BookWithAvailability(BaseBook):
 
 class LendCreate(BaseModel):
     isbn: str
+
 
 class Lend(BaseModel):
     model_config = ConfigDict(from_attributes=True)

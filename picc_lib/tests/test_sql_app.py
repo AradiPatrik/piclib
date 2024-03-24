@@ -8,7 +8,7 @@ from .. import crud
 from . import seed
 from .. import models
 
-from ...router import app
+from picc_lib.router import app
 
 client = TestClient(app)
 
@@ -76,10 +76,7 @@ def test_lend_book_to_new_user(db_session):
     seed.book(db_session, isbn="123")
 
     # WHEN
-    response = client.post(
-        "/lends/yanbin",
-        json={"isbn": "123"}
-    )
+    response = client.post("/lends/yanbin", json={"isbn": "123"})
 
     # THEN
     assert response.status_code == 200
@@ -123,7 +120,9 @@ def test_GIVEN_user_has_no_books_WHEN_get_books_THEN_return_empty_list(db_sessio
     assert len(lends) == 0
 
 
-def test_GIVEN_user_has_lend_WHEN_update_lend_date_THEN_lend_date_should_update(db_session):
+def test_GIVEN_user_has_lend_WHEN_update_lend_date_THEN_lend_date_should_update(
+    db_session,
+):
     # GIVEN
     seed.book(db_session, isbn="123")
     seed.lend(db_session, slack_id="yanbin", isbn="123")
@@ -131,11 +130,96 @@ def test_GIVEN_user_has_lend_WHEN_update_lend_date_THEN_lend_date_should_update(
     # WHEN
     response = client.post("/lends/yanbin/123/return")
 
-    assert response.status_code == 200
-
     # THEN
-    lends: Sequence[models.Lend] = crud.get_lends_of_user(
-        db_session, slack_id="yanbin")
+    assert response.status_code == 200
+    lends: Sequence[models.Lend] = crud.get_lends_of_user(db_session, slack_id="yanbin")
 
     assert lends[0].return_date is not None
     assert is_recent(lends[0].return_date, seconds=1)
+
+
+def test_GIVEN_book_has_never_been_lent_WHEN_get_availability_THEN_it_should_be_available(
+    db_session,
+):
+    # GIVEN
+    book = seed.book(db_session, isbn="123")
+
+    # WHEN
+    response = client.get("/books/availability")
+
+    # THEN
+    assert response.status_code == 200
+    response = response.json()
+    assert len(response) == 1
+    assert response[0]["availability"]["is_available"]
+    assert response[0]["availability"]["slack_id"] is None
+    assert response[0]["availability"]["expected_return_date"] is None
+
+    assert response[0]["title"] == book.title
+    assert response[0]["author"] == book.author
+    assert response[0]["isbn"] == book.isbn
+
+
+def test_GIVEN_book_has_been_lent_but_not_returned_yet_WHEN_get_availability_THEN_it_should_not_be_available(
+    db_session,
+):
+    # GIVEN
+    book = seed.book(db_session, isbn="123")
+    lend = seed.lend(db_session, isbn="123")
+
+    # WHEN
+    response = client.get("/books/availability")
+
+    # THEN
+    assert response.status_code == 200
+    response = response.json()
+    assert len(response) == 1
+    assert not response[0]["availability"]["is_available"]
+    assert response[0]["availability"]["slack_id"] == lend.slack_id
+    assert response[0]["availability"]["expected_return_date"] == datetime.isoformat(
+        lend.lend_date + timedelta(weeks=4)
+    )
+
+    assert response[0]["title"] == book.title
+    assert response[0]["author"] == book.author
+    assert response[0]["isbn"] == book.isbn
+
+
+def test_GIVEN_book_has_been_lent_and_returned_WHEN_get_availability_THEN_it_should_be_avialable(
+    db_session,
+):
+    # GIVEN
+    book = seed.book(db_session, isbn="123")
+    lend = seed.lend(
+        db_session,
+        isbn="123",
+        lend_date=datetime.now() - timedelta(days=10),
+        return_date=datetime.now(),
+    )
+
+    # WHEN
+    response = client.get("/books/availability")
+
+    # THEN
+    assert response.status_code == 200
+    response = response.json()
+    assert len(response) == 1
+    assert response[0]["availability"]["is_available"]
+    assert response[0]["availability"]["slack_id"] is None
+    assert response[0]["availability"]["expected_return_date"] is None
+
+    assert response[0]["title"] == book.title
+    assert response[0]["author"] == book.author
+    assert response[0]["isbn"] == book.isbn
+
+
+def test_GIVEN_no_books_WHEN_get_availability_THEN_it_should_return_empty_list(
+    db_session,
+):
+    # WHEN
+    response = client.get("/books/availability")
+
+    # THEN
+    assert response.status_code == 200
+    response = response.json()
+    assert len(response) == 0

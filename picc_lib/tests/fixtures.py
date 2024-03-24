@@ -1,14 +1,16 @@
+from typing import Any, Generator
 import pytest
 from sqlalchemy import create_engine, StaticPool
+from sqlalchemy.engine.base import Engine
 from sqlalchemy.orm import Session, sessionmaker
 from ..database import Base
-from ...router import app, get_db
+from ..router import app, get_db
 
 SQLALCHEMY_DATABASE_URL = "sqlite+pysqlite:///:memory:"
 
 
-@pytest.fixture(scope='function')
-def db_engine():
+@pytest.fixture(scope="function")
+def db_engine() -> Generator[Engine, Any, None]:
     engine = create_engine(
         SQLALCHEMY_DATABASE_URL,
         connect_args={"check_same_thread": False},
@@ -21,12 +23,12 @@ def db_engine():
     engine.dispose()
 
 
-@pytest.fixture(scope='function')
+@pytest.fixture(scope="function")
 def db_session_factory(db_engine):
     return sessionmaker(bind=db_engine)
 
 
-@pytest.fixture(scope='function')
+@pytest.fixture(scope="function")
 def db_session(db_session_factory):
     session: Session = db_session_factory()
 

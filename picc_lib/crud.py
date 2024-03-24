@@ -49,22 +49,27 @@ def get_lends_of_user(db: Session, slack_id: str):
 
 
 def return_book(db: Session, slack_id: str, isbn: str):
-    statement = update(models.Lend) \
-        .where(
-        models.Lend.slack_id == slack_id,
-        models.Lend.isbn == isbn
-    ).values(return_date=datetime.now())
+    statement = (
+        update(models.Lend)
+        .where(models.Lend.slack_id == slack_id, models.Lend.isbn == isbn)
+        .values(return_date=datetime.now())
+    )
 
     db.execute(statement)
     db.commit()
 
 
-def get_books_with_lends(db: Session) -> Sequence[Row[Tuple[Any, ...]]]:
+def get_books_with_lends(
+    db: Session,
+) -> Sequence[Row[Tuple[models.Book, models.Lend | None, datetime | None]]]:
     Book = models.Book
     Lend = models.Lend
-    stmt = select(Book, Lend, func.max(Lend.lend_date)).outerjoin(Lend, onclause=Lend.isbn == Book.isbn).group_by(Book.isbn)
-    foo = db.execute(stmt).all()
-    return foo
+    stmt = (
+        select(Book, Lend, func.max(Lend.lend_date))
+        .outerjoin(Lend, onclause=Lend.isbn == Book.isbn)
+        .group_by(Book.isbn)
+    )
+    return db.execute(stmt).all()  # type: ignore - Lend and DateTime might be None if the book hasn't been lent
 
 
 def get_books_and_limit_lends(db: Session):
